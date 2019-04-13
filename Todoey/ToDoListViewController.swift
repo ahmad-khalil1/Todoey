@@ -13,9 +13,15 @@ class ToDoListViewController: UITableViewController {
     // declare intant variabel
 
     var toDoArray = ["play fotball","do gym","study more"]
+    let defaults = UserDefaults.standard
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
+        // retrive the data from the user default , doing the binary check
+        if let items = defaults.array(forKey: "toDoArray") as? [String]{
+            toDoArray = items
+        }
+        
     }
 
  ////////////////////////////////////////////////////////////////
@@ -63,6 +69,8 @@ class ToDoListViewController: UITableViewController {
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
             // the code thet will excuted when the user press the button of action alert
             self.toDoArray.append(textfield.text!)
+            // saving the values in .plist sothat we can retrive it with the key
+            self.defaults.set(self.toDoArray, forKey: "toDoArray")
             self.tableView.reloadData()
         }
         alert.addAction(action)
