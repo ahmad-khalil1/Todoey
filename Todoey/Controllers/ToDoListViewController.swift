@@ -12,16 +12,27 @@ class ToDoListViewController: UITableViewController {
     
     // declare intant variabel
 
-    var toDoArray = ["play fotball","do gym","study more"]
+    var toDoArray = [Items]()
+    
     let defaults = UserDefaults.standard
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        // retrive the data from the user default , doing the binary check
-        if let items = defaults.array(forKey: "toDoArray") as? [String]{
-            toDoArray = items
-        }
+        let newItem = Items()
+        newItem.title = "get milk"
+        toDoArray.append(newItem)
         
+        let newItem1 = Items()
+        newItem1.title = "play football "
+        toDoArray.append(newItem1)
+       
+        
+        
+         //retrive the data from the user default , doing the binary check
+        if let itemsArrayRetrived = defaults.array(forKey: "toDoArray") as? [Items]  {
+            toDoArray = itemsArrayRetrived
+        }
+
     }
 
  ////////////////////////////////////////////////////////////////
@@ -32,18 +43,19 @@ class ToDoListViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "toDoItemCell", for: indexPath) as! UITableViewCell
         
-       cell.textLabel?.text = toDoArray[indexPath.row]
+        cell.textLabel?.text = toDoArray[indexPath.row].title
         
+        cell.accessoryType = toDoArray[indexPath.row].done ? .checkmark : .none
         return cell
     }
     
     // numberOfRowsInSection Method
-    
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return toDoArray.count
     }
 
     //MARK:- deleget method to perform when the user press a cell
+    
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         //print(toDoArray[indexPath.row])
@@ -54,21 +66,24 @@ class ToDoListViewController: UITableViewController {
         //method to enabel the checkmark accessory t othe selected cell
         //cellForRow(at: indexPath): to specify which cell by associate it with the indexpath variabel
         //checking to see the state of the accessory type
-        if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark {
-        tableView.cellForRow(at: indexPath)?.accessoryType = .none
-        }else{
-        tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
-        }
-        
+        toDoArray[indexPath.row].done = !toDoArray[indexPath.row].done
+        tableView.reloadData()
     }
+    
+    //MARK:- navigation bar add Button
+    
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         
         //declar a local variable to be accesed to all closure
         var textfield = UITextField()
         let alert = UIAlertController(title: "Add a New Item to the list", message: "", preferredStyle: .alert)
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
-            // the code thet will excuted when the user press the button of action alert
-            self.toDoArray.append(textfield.text!)
+           // the code thet will excuted when the user press the button of action alert
+         
+            let newitem = Items()
+            newitem.title = textfield.text!
+
+            self.toDoArray.append(newitem)
             // saving the values in .plist sothat we can retrive it with the key
             self.defaults.set(self.toDoArray, forKey: "toDoArray")
             self.tableView.reloadData()
