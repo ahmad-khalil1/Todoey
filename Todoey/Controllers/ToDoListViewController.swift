@@ -14,7 +14,8 @@ class ToDoListViewController: UITableViewController {
 
     var toDoArray = [Items]()
     
-    let defaults = UserDefaults.standard
+    let filePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("items.plist")
+//    let defaults = UserDefaults.standard
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -29,9 +30,10 @@ class ToDoListViewController: UITableViewController {
         
         
          //retrive the data from the user default , doing the binary check
-        if let itemsArrayRetrived = defaults.array(forKey: "toDoArray") as? [Items]  {
-            toDoArray = itemsArrayRetrived
-        }
+        loadData()
+//        if let itemsArrayRetrived = defaults.array(forKey: "toDoArray") as? [Items]  {
+//            toDoArray = itemsArrayRetrived
+//        }
 
     }
 
@@ -68,6 +70,7 @@ class ToDoListViewController: UITableViewController {
         //checking to see the state of the accessory type
         toDoArray[indexPath.row].done = !toDoArray[indexPath.row].done
         tableView.reloadData()
+        self.saveItems()
     }
     
     //MARK:- navigation bar add Button
@@ -85,8 +88,9 @@ class ToDoListViewController: UITableViewController {
 
             self.toDoArray.append(newitem)
             // saving the values in .plist sothat we can retrive it with the key
-            self.defaults.set(self.toDoArray, forKey: "toDoArray")
-            self.tableView.reloadData()
+            self.saveItems()
+            //self.defaults.set(self.toDoArray, forKey: "toDoArray")
+           
         }
         alert.addAction(action)
         alert.addTextField { (addButtonTextfield) in
@@ -95,5 +99,28 @@ class ToDoListViewController: UITableViewController {
         present(alert, animated: true, completion: nil)
         
     }
+    
+    func saveItems(){
+        let encoder = PropertyListEncoder()
+        do{
+        let data = try encoder.encode(toDoArray)
+            try data.write(to: filePath!)
+        }catch{
+            print("error i encoding \(error)")
+        }
+         self.tableView.reloadData()
+    }
+     
+    func loadData(){
+        if let data = try? Data(contentsOf:filePath!){
+            let decoder = PropertyListDecoder()
+            do{
+                toDoArray = try decoder.decode([Items].self, from: data)
+            }catch{
+                print("decoding error \(error)")
+            }
+        }
+    }
+    
 }
 
