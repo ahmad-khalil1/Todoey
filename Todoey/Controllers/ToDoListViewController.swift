@@ -8,12 +8,18 @@
 
 import UIKit
 import CoreData
+import RealmSwift
 
 class ToDoListViewController: UITableViewController {
     
+    
+    
+    let realm = try! Realm()
+    
     // declare instant variabel
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
-    var toDoArray = [Items]()
+    //let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    var toDoArray : Results<Items>?
+    
     var selectedCatagery :Catageries? {
         didSet{
             loadData()
@@ -53,15 +59,22 @@ class ToDoListViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "toDoItemCell", for: indexPath) as! UITableViewCell
         
-        cell.textLabel?.text = toDoArray[indexPath.row].title
+        if let  items =  toDoArray?[indexPath.row] {
+             cell.textLabel?.text = items.title
+            //Ternary operator
+            // value = condition ? valueIfTrue : ValueIfFalse
+            
+            cell.accessoryType = items.done ? .checkmark : .none
+        }else{
+            cell.textLabel?.text = "there is no items"
+        }
         
-        cell.accessoryType = toDoArray[indexPath.row].done ? .checkmark : .none
         return cell
     }
     
     // numberOfRowsInSection Method
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return toDoArray.count
+        return toDoArray?.count ?? 1
     }
 
     //MARK:- deleget method to perform when the user press a cell
@@ -73,6 +86,17 @@ class ToDoListViewController: UITableViewController {
         //makeing selecting cell and deselcting it in animated (from static gray back to be white)
         tableView.deselectRow(at: indexPath, animated: true)
         
+        if let item = toDoArray?[indexPath.row]{
+            do{
+                try realm.write {
+                    item.done = !item.done
+                }
+            }catch{
+                print("error updating the done property of the items , \(error)")
+            }
+        }
+        tableView.reloadData()
+        
         //deleting item from Core data
 //        context.delete(toDoArray[indexPath.row])
 //        toDoArray.remove(at: indexPath.row)
@@ -80,9 +104,9 @@ class ToDoListViewController: UITableViewController {
         //method to enabel the checkmark accessory t othe selected cell
         //cellForRow(at: indexPath): to specify which cell by associate it with the indexpath variabel
         //checking to see the state of the accessory type
-        toDoArray[indexPath.row].done = !toDoArray[indexPath.row].done
-        tableView.reloadData()
-        self.saveItems()
+//        toDoArray[indexPath.row].done = !toDoArray[indexPath.row].done
+//        tableView.reloadData()
+//        self.saveItems()
     }
     
     //MARK:- navigation bar add Button
@@ -95,14 +119,26 @@ class ToDoListViewController: UITableViewController {
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
            // the code thet will excuted when the user press the button of action alert
          
-            let newitem = Items(context: self.context)
-            newitem.title = textfield.text!
-            newitem.done = false
-            newitem.parrentCategry = self.selectedCatagery
+            if let currentCategory = self.selectedCatagery{
 
-            self.toDoArray.append(newitem)
+            do{
+                try self.realm.write {
+
+                    let newItem = Items()
+                    newItem.title = textfield.text!
+                    newItem.dateCreated = Date()
+                    currentCategory.items.append(newItem)
+                    
+                }
+                        }catch{
+                            print("error saving data in items \(error)")
+                        }
+            }
+            self.tableView.reloadData()
+            
+           // self.toDoArray.append(newitem)
             // saving the values in .plist sothat we can retrive it with the key
-            self.saveItems()
+           // self.saveItems(item: newitem)
             //self.defaults.set(self.toDoArray, forKey: "toDoArray")
            
         }
@@ -113,31 +149,35 @@ class ToDoListViewController: UITableViewController {
         present(alert, animated: true, completion: nil)
         
     }
-    
-    func saveItems(){
-        do{
-        try context.save()
-        }catch{
-            print("error saving context \(error)")
-        }
-         self.tableView.reloadData()
-    }
+//
+//    func saveItems(item: Items){
+//        do{
+//            try realm.write {
+//                realm.add(item)
+//            }
+//        }catch{
+//            print("error saving data in items \(error)")
+//        }
+//
+//         self.tableView.reloadData()
+//    }
     
     //with = external prams , request = internal prams , siting an default value to the input if we did'nt give one
-    func loadData(with request : NSFetchRequest<Items> = Items.fetchRequest() , predicat : NSPredicate? = nil){
+    func loadData(){
+        toDoArray = selectedCatagery?.items.sorted(byKeyPath: "title", ascending: true)
      //   let request : NSFetchRequest<Items> = Items.fetchRequest()
-        let catageryPredicate = NSPredicate(format: "parrentCategry.name MATCHES %@", selectedCatagery!.name!)
-        
-        if let SearchPredicat = predicat {
-            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [catageryPredicate,SearchPredicat])
-        }else{
-            request.predicate = catageryPredicate
-        }
-        do{
-            toDoArray = try context.fetch(request)
-        } catch{
-              print("error fetching data \(error)")
-            }
+//        let catageryPredicate = NSPredicate(format: "parrentCategry.name MATCHES %@", selectedCatagery!.name!)
+//
+//        if let SearchPredicat = predicat {
+//            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [catageryPredicate,SearchPredicat])
+//        }else{
+//            request.predicate = catageryPredicate
+//        }
+//        do{
+//            toDoArray = try context.fetch(request)
+//        } catch{
+//              print("error fetching data \(error)")
+//            }
 
       tableView.reloadData()
     }
@@ -147,14 +187,18 @@ class ToDoListViewController: UITableViewController {
 extension ToDoListViewController : UISearchBarDelegate {
     // searching bar delegate methode thet deals with searching process
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-        let request : NSFetchRequest<Items> = Items.fetchRequest()
-        //adding the predicate to the request thet will search for the title that contains the text in the searchbar
-        let predicate =  NSPredicate(format: "title CONTAINS[CD] %@", searchBar.text!)
-        //adding the sortdescriptors thet will sort the title alphapitacally by  (ascending: true)
-        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
-        loadData(with: request , predicat: predicate)
+        toDoArray = toDoArray?.filter("title CONTAINS [CD] %@", searchBar.text!).sorted(byKeyPath: "dateCreated", ascending: true)
+        tableView.reloadData()
         
     }
+//        let request : NSFetchRequest<Items> = Items.fetchRequest()
+//        //adding the predicate to the request thet will search for the title that contains the text in the searchbar
+//        let predicate =  NSPredicate(format: "title CONTAINS[CD] %@", searchBar.text!)
+//        //adding the sortdescriptors thet will sort the title alphapitacally by  (ascending: true)
+//        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+//        loadData(with: request , predicat: predicate)
+//
+    
     // searching bar delegate methode thet deals withdismis the keyboard and return to the firest case
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
