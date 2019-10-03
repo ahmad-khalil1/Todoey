@@ -7,12 +7,13 @@
 //
 
 import UIKit
-import CoreData
 import RealmSwift
+import ChameleonFramework
 
-class ToDoListViewController: UITableViewController {
+class ToDoListViewController: SwipeCellController {
     
     
+    @IBOutlet weak var searchBar: UISearchBar!
     
     let realm = try! Realm()
     
@@ -48,7 +49,29 @@ class ToDoListViewController: UITableViewController {
 //        if let itemsArrayRetrived = defaults.array(forKey: "toDoArray") as? [Items]  {
 //            toDoArray = itemsArrayRetrived
 //        }
-
+        
+        tableView.rowHeight = 70
+        tableView.separatorStyle = .none
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        title = selectedCatagery?.name
+        guard let color = selectedCatagery?.color else {fatalError()}
+        updateNavBarUI(hexColor : color)
+    }
+    
+    func updateNavBarUI(hexColor color : String){
+        guard let navBar = navigationController?.navigationBar else {fatalError()}
+        guard let navColor =  UIColor(hexString: color) else {fatalError()}
+        navBar.barTintColor = navColor
+        navBar.tintColor = ContrastColorOf(navColor, returnFlat: true)
+        navBar.largeTitleTextAttributes = [NSAttributedStringKey.foregroundColor : ContrastColorOf(navColor, returnFlat: true )]
+        searchBar.barTintColor = navColor
+        
+        
+    }
+    override func viewWillDisappear(_ animated: Bool) {
+        updateNavBarUI(hexColor: "005493")
     }
 
  ////////////////////////////////////////////////////////////////
@@ -57,14 +80,20 @@ class ToDoListViewController: UITableViewController {
     
     // cellForRowMethod : associat the cell and input data to the tabel view
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "toDoItemCell", for: indexPath) as! UITableViewCell
         
-        if let  items =  toDoArray?[indexPath.row] {
-             cell.textLabel?.text = items.title
+        let cell = super.tableView(tableView, cellForRowAt: indexPath  )
+      
+            
             //Ternary operator
             // value = condition ? valueIfTrue : ValueIfFalse
             
-            cell.accessoryType = items.done ? .checkmark : .none
+            if let item = toDoArray?[indexPath.row]{
+                cell.textLabel?.text = item.title
+                if  let color = UIColor(hexString: self.selectedCatagery!.color)?.darken(byPercentage: CGFloat(indexPath.row)/CGFloat(toDoArray!.count)){
+            cell.backgroundColor = color
+                cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
+                }
+            cell.accessoryType = item.done ? .checkmark : .none
         }else{
             cell.textLabel?.text = "there is no items"
         }
@@ -163,6 +192,10 @@ class ToDoListViewController: UITableViewController {
 //    }
     
     //with = external prams , request = internal prams , siting an default value to the input if we did'nt give one
+    
+    
+    // MARK:- Manipulating data methods
+    
     func loadData(){
         toDoArray = selectedCatagery?.items.sorted(byKeyPath: "title", ascending: true)
      //   let request : NSFetchRequest<Items> = Items.fetchRequest()
@@ -181,8 +214,23 @@ class ToDoListViewController: UITableViewController {
 
       tableView.reloadData()
     }
+    override func updateData(at indexpath: IndexPath) {
+        
+            if let item = toDoArray?[indexpath.row]{
+                do{
+            try realm.write {
+                realm.delete(item)
+            }
+        }catch{
+            print ("error deleting item , \(error)")
+        }
+        }
+        
+    }
     
 }
+
+// MARK:- Search Bar extention
 
 extension ToDoListViewController : UISearchBarDelegate {
     // searching bar delegate methode thet deals with searching process
@@ -210,8 +258,5 @@ extension ToDoListViewController : UISearchBarDelegate {
             }
         }
     }
-
-    
-    
 }
 

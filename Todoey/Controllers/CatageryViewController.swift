@@ -8,8 +8,10 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
-class CatageryViewController: UITableViewController {
+class CatageryViewController: SwipeCellController {
+
     
     // initializing Rrealm ,, !: mean that i know what i am doing
     let realm = try! Realm()
@@ -23,6 +25,8 @@ class CatageryViewController: UITableViewController {
         super.viewDidLoad()
         tableView.delegate = self
         tableView.dataSource = self
+        tableView.rowHeight = 70
+        tableView.separatorStyle = .none
         loadData()
 
     }
@@ -30,12 +34,45 @@ class CatageryViewController: UITableViewController {
     
     //MARK:- tableview dataSource Methods
     
+//
+//    func tableView(_ tableView: UITableView, editActionsOptionsForRowAt indexPath: IndexPath, for orientation: SwipeActionsOrientation) -> SwipeOptions {
+//        var options = SwipeOptions()
+//        options.expansionStyle = .destructive
+//        //options.transitionStyle = .border
+//        //self.tableView.reloadData()
+//        return options
+//    }
+//
+//    func tableView(_ tableView: UITableView, editActionsForRowAt indexPath: IndexPath, for orientation: SwipeActionsOrientation) -> [SwipeAction]? {
+//
+//        guard orientation == .right else { return nil }
+//
+//        let deleteAction = SwipeAction(style: .destructive, title: "Delete") { action, indexPath in
+//            // handle action by updating model with deletion
+//
+//        }
+//             // loadData()
+//            // tableView.reloadData()
+//        }
+//
+//        // customize the action appearance
+//        deleteAction.image = UIImage(named: "delete-icon")
+//
+//        return [deleteAction]
+//    }
+
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "catageryCell", for: indexPath) as! UITableViewCell
-        
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         // adding ? to say if it is't nil then do that ,, and ?? if it is nil do that
+        
         cell.textLabel?.text = catageryArray?[indexPath.row].name ?? "there is no catageries yet "
+        if let category = catageryArray?[indexPath.row]{
+            guard let categeryColor = UIColor(hexString: category.color)  else {fatalError()}
+        cell.backgroundColor = categeryColor
+        cell.textLabel?.textColor = ContrastColorOf(categeryColor ,returnFlat: true)
+        }
         //cell.textLabel?.text = catageryArray![indexPath.row].name
+        
         return cell
     }
     
@@ -66,6 +103,7 @@ class CatageryViewController: UITableViewController {
         let action = UIAlertAction(title: "Add Catagery", style: .default) { (action) in
             let newCatagery = Catageries()
             newCatagery.name = textField.text!
+            newCatagery.color = UIColor.randomFlat.hexValue()
             // no need more for apending ,cause the RESULT is self updating container
         // self.catageryArray.append(newCatagery)
             self.saveData(categery: newCatagery)
@@ -89,9 +127,10 @@ class CatageryViewController: UITableViewController {
                 realm.add(categery)
             }
         }catch{
-            print("error saving data in Catageries \(error)")
+            print("error saving the category, \(error)")
         }
-        self.tableView.reloadData()
+
+        tableView.reloadData()
         
     }
     func loadData(){
@@ -100,8 +139,20 @@ class CatageryViewController: UITableViewController {
 
         self.tableView.reloadData()
     }
-
-
-    }
     
+    // MARK:- deleteing method
+    
+    override func updateData(at indexpath: IndexPath) {
+        if let category = self.catageryArray?[indexpath.row]{
+            do {
+                try self.realm.write {
+                    self.realm.delete(category)
+                }
+            }catch{
+                print("error deleting Realm , \(error)")
+            }
+        }
+    }
+}
+
 

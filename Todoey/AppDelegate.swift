@@ -22,12 +22,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 //        print("the app Did finih launching")
 //
         //where the realm file exsist
-        // print(Realm.Configuration.defaultConfiguration.fileURL)
+          print(Realm.Configuration.defaultConfiguration.fileURL)
 
         
         
         do{
-            _ = try  Realm()
+            try  Realm()
         }catch{
             print("error intializing realm")
             
